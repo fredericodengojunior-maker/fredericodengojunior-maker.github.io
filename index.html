@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noble Trade</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+/* Colors & Reset */
+* { margin:0; padding:0; box-sizing:border-box; font-family:Arial, sans-serif; }
+:root { --red:#E53935; --black:#1C1C1C; --white:#F5F5F5; --text:#333; }
+
+/* Body */
+body { background:var(--white); color:var(--text); }
+
+/* Navbar */
+nav {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:15px 30px; position:sticky; top:0; background:var(--black); color:#fff; z-index:100;
+}
+nav a { margin:0 12px; color:#fff; text-decoration:none; font-weight:600; transition:0.3s; }
+nav a:hover { color:var(--red); }
+
+/* Hero */
+header {
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  height:80vh; text-align:center; background:linear-gradient(135deg, var(--red), var(--black));
+  color:#fff; padding:0 20px;
+}
+header h1 { font-size:3em; margin-bottom:20px; }
+header p { font-size:1.2em; margin-bottom:30px; }
+header button {
+  padding:15px 30px; border:none; border-radius:8px; background:#fff; color:var(--red);
+  font-weight:600; cursor:pointer; margin:5px; transition:0.3s;
+}
+header button:hover { background:var(--red); color:#fff; }
+
+/* Sections */
+section { padding:80px 20px; max-width:1100px; margin:auto; }
+section h2 { font-size:2em; margin-bottom:20px; color:var(--red); text-align:center; }
+section p { text-align:center; font-size:1.1em; color:#555; }
+
+/* Cards */
+.card-container { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px,1fr)); gap:20px; margin-top:40px; }
+.card { background:#fff; padding:20px; border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,0.1); text-align:center; transition:0.3s; }
+.card:hover { transform:translateY(-5px); box-shadow:0 10px 20px rgba(0,0,0,0.15); }
+
+/* Auth & Dashboard */
+.container { max-width:400px; margin:50px auto; background:#fff; padding:25px; border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,0.1); }
+input, select, button { width:100%; padding:12px; margin:8px 0; border-radius:6px; border:1px solid #ccc; }
+button { background:var(--red); color:#fff; border:none; font-weight:600; cursor:pointer; }
+button:hover { background:var(--black); }
+#dashboard { display:none; }
+
+/* Subscription countdown */
+.countdown { font-weight:600; margin:10px 0; color:var(--red); }
+
+/* Sales stats placeholder */
+.stats-container { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:20px; margin-top:20px; }
+.stats-card { background:#fff; padding:15px; border-radius:10px; box-shadow:0 3px 10px rgba(0,0,0,0.1); text-align:center; }
+
+/* Footer */
+footer { text-align:center; padding:30px; background:#000; color:#fff; font-size:0.9em; }
+</style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav>
+  <div><strong>Noble Trade</strong></div>
+  <div>
+    <a href="#home">Home</a>
+    <a href="#about">About</a>
+    <a href="#features">Why Buy/Sell</a>
+    <a href="#contact">Contact</a>
+    <a href="#" id="signInBtn">Sign In</a>
+    <a href="#" id="signUpBtn">Sign Up</a>
+    <a href="#" id="logoutBtn" style="display:none;">Logout</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<header id="home">
+  <h1>Welcome to Noble Trade</h1>
+  <p>Start buying or become a vendor and grow your business!</p>
+  <div>
+    <button id="ctaSignUpVendor">Become Vendor</button>
+    <button id="ctaSignUpBuyer">Start Buying</button>
+  </div>
+</header>
+
+<!-- About Section -->
+<section id="about">
+  <h2>About Noble Trade</h2>
+  <p>Noble Trade is your modern platform to connect buyers and sellers with ease and security.</p>
+</section>
+
+<!-- Why Buy / Sell Section -->
+<section id="features">
+  <h2>Why Buy With Us</h2>
+  <div class="card-container">
+    <div class="card"><h3>Secure Payments</h3><p>All transactions are safe and secure.</p></div>
+    <div class="card"><h3>Wide Selection</h3><p>Access multiple sellers and products easily.</p></div>
+    <div class="card"><h3>Fast Support</h3><p>Our support team is always ready to assist buyers.</p></div>
+  </div>
+
+  <h2 style="margin-top:60px;">Why Sell With Us</h2>
+  <div class="card-container">
+    <div class="card"><h3>Grow Your Business</h3><p>Reach new buyers effortlessly.</p></div>
+    <div class="card"><h3>Subscription Plan</h3><p>Simple $100 / 4 months subscription.</p></div>
+    <div class="card"><h3>Easy Management</h3><p>Track your sales and products with ease.</p></div>
+  </div>
+</section>
+
+<!-- Contact -->
+<section id="contact">
+  <h2>Contact Us</h2>
+  <p>Email: support@nobletrade.com</p>
+</section>
+
+<!-- Authentication Section -->
+<section id="authSection" class="container">
+  <h2 id="authTitle">Sign Up</h2>
+  <select id="roleSelect">
+    <option value="buyer">Buyer</option>
+    <option value="seller">Seller</option>
+  </select>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+  <button id="authAction">Sign Up</button>
+  <p id="switchAuth" style="cursor:pointer;color:var(--red);text-decoration:underline;text-align:center;">Already have an account? Sign In</p>
+  <p id="authMessage" style="color:red;"></p>
+</section>
+
+<!-- Dashboard Section -->
+<section id="dashboard" class="container">
+  <h2>Dashboard</h2>
+  <p><strong>Email:</strong> <span id="userEmail"></span></p>
+  <p><em id="roleMessage"></em></p>
+
+  <!-- Seller Subscription -->
+  <div id="sellerSubscription" style="display:none;">
+    <p class="countdown">Subscription expires in: <span id="subscriptionCountdown">--</span></p>
+    <button id="renewSubscriptionBtn">Renew Subscription</button>
+
+    <h3 style="margin-top:30px;">Sales Statistics (Demo)</h3>
+    <div class="stats-container">
+      <div class="stats-card"><h4>Today</h4><p>$50</p></div>
+      <div class="stats-card"><h4>This Week</h4><p>$300</p></div>
+      <div class="stats-card"><h4>This Month</h4><p>$1200</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  &copy; 2025 Noble Trade. All rights reserved.
+</footer>
+
+<script>
+  // Firebase config (replace with your own)
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // DOM Elements
+  const authSection = document.getElementById('authSection');
+  const dashboard = document.getElementById('dashboard');
+  const authTitle = document.getElementById('authTitle');
+  const authAction = document.getElementById('authAction');
+  const switchAuth = document.getElementById('switchAuth');
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+  const authMessage = document.getElementById('authMessage');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const userEmail = document.getElementById('userEmail');
+  const roleMessage = document.getElementById('roleMessage');
+  const roleSelect = document.getElementById('roleSelect');
+  const ctaSignUpVendor = document.getElementById('ctaSignUpVendor');
+  const ctaSignUpBuyer = document.getElementById('ctaSignUpBuyer');
+  const sellerSubscription = document.getElementById('sellerSubscription');
+  const subscriptionCountdown = document.getElementById('subscriptionCountdown');
+  const renewSubscriptionBtn = document.getElementById('renewSubscriptionBtn');
+
+  let isSignIn = false;
+  roleSelect.style.display = "block";
+
+  // Hero buttons
+  ctaSignUpVendor.addEventListener('click', ()=>{roleSelect.value='seller'; showAuthSection();});
+  ctaSignUpBuyer.addEventListener('click', ()=>{roleSelect.value='buyer'; showAuthSection();});
+
+  function showAuthSection(){ authSection.style.display='block'; dashboard.style.display='none'; logoutBtn.style.display='none'; }
+
+  switchAuth.addEventListener('click', ()=>{
+    isSignIn = !isSignIn;
+    authTitle.textContent = isSignIn ? "Sign In" : "Sign Up";
+    authAction.textContent = isSignIn ? "Sign In" : "Sign Up";
+    switchAuth.textContent = isSignIn ? "Don't have an account? Sign Up" : "Already have an account? Sign In";
+  });
+
+  // Auth button
+  authAction.addEventListener('click', ()=>{
+    const email = emailInput.value;
+    const password = passwordInput.value;
+    const role = roleSelect.value;
+    authMessage.textContent='';
+
+    if(isSignIn){
+      auth.signInWithEmailAndPassword(email,password)
+      .then(userCred=>{
+        const user = userCred.user;
+        if(!user.emailVerified){ authMessage.textContent='Please verify your email first.'; return; }
+        db.collection('users').doc(user.uid).get().then(doc=>{
+          showDashboard(user, doc.exists?doc.data():{role:role, subscriptionActive:false, subscriptionExpiry: new Date()});
+        });
+      }).catch(err=>authMessage.textContent=err.message);
+    } else {
+      auth.createUserWithEmailAndPassword(email,password)
+      .then(userCred=>{
+        const user = userCred.user;
+        user.sendEmailVerification();
+        let subscriptionActive = role==='seller'?true:false; // demo placeholder
+        let subscriptionExpiry = role==='seller'?new Date(new Date().getTime()+1000*60*60*24*120):null; // 4 months placeholder
+        db.collection('users').doc(user.uid).set({
+          email, role, subscriptionActive, subscriptionExpiry, createdAt:new Date()
+        });
+        authMessage.textContent='Verification email sent. Please verify before dashboard access.';
+      }).catch(err=>authMessage.textContent=err.message);
+    }
+  });
+
+  // Show dashboard
+  function showDashboard(user,data){
+    authSection.style.display='none'; dashboard.style.display='block'; logoutBtn.style.display='inline';
+    userEmail.textContent=user.email;
+    roleMessage.textContent=`Role: ${data.role}`;
+
+    if(data.role==='seller'){
+      sellerSubscription.style.display='block';
+      startCountdown(new Date(data.subscriptionExpiry));
+    } else sellerSubscription.style.display='none';
+  }
+
+  // Countdown
+  let countdownInterval;
+  function startCountdown(expiryDate){
+    clearInterval(countdownInterval);
+    countdownInterval=setInterval(()=>{
+      const now = new Date();
+      const diff = expiryDate-now;
+      if(diff<=0){ subscriptionCountdown.textContent='Expired'; clearInterval(countdownInterval); return; }
+      const days = Math.floor(diff/(1000*60*60*24));
+      const hours = Math.floor((diff/(1000*60*60))%24);
+      const mins = Math.floor((diff/(1000*60))%60);
+      subscriptionCountdown.textContent=`${days}d ${hours}h ${mins}m`;
+    },1000);
+  }
+
+  renewSubscriptionBtn.addEventListener('click', ()=>{
+    alert('Simulated renewal successful. Subscription extended 4 months.');
+    const newExpiry = new Date(new Date().getTime()+1000*60*60*24*120);
+    const user = auth.currentUser;
+    db.collection('users').doc(user.uid).update({subscriptionExpiry:newExpiry});
+    startCountdown(newExpiry);
+  });
+
+  logoutBtn.addEventListener('click', ()=>{
+    auth.signOut().then(()=>{showAuthSection(); emailInput.value=''; passwordInput.value='';});
+  });
+
+  auth.onAuthStateChanged(user=>{
+    if(user){
+      db.collection('users').doc(user.uid).get().then(doc=>{
+        if(doc.exists){
+          if(!user.emailVerified){ showAuthSection(); authMessage.textContent='Please verify your email first.'; return; }
+          showDashboard(user, doc.data());
+        }
+      });
+    }
+  });
+</script>
+</body>
+</html>
